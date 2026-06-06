@@ -15,7 +15,7 @@ def carica_dizionario_completo():
         response = urllib.request.urlopen(DICT_URL, timeout=30)
         words = response.read().decode('utf-8').splitlines()
         # Pulizia e filtraggio dei lemmi (solo lettere, lunghezza minima 2 caratteri)
-        parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 2]
+        parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 3]
     except Exception as e:
         # Fallback di emergenza se la connessione fallisce
         parole = ["ENIGMA", "PYTHON", "STREAMLIT", "GITHUB", "IPAD", "INFORMATICA", 
