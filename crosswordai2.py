@@ -1,47 +1,44 @@
-import tkinter as tk
-from tkinter import messagebox
+import streamlit as st
 import random
 import urllib.request
-import threading
+
+# --- Configurazioni della pagina ---
+st.set_page_config(page_title="Cruciverba Python", layout="centered")
 
 DICT_URL = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/paroleitaliane/parole_italiane.txt"
-parole_italiane = []
 
-def scarica_dizionario():
-    """Scarica il dizionario in background."""
-    global parole_italiane
+@st.cache_data(show_spinner="Scaricamento dizionario in corso...")
+def carica_dizionario():
+    """Scarica e mette in cache il dizionario per evitare download multipli."""
     try:
         response = urllib.request.urlopen(DICT_URL, timeout=5)
         words = response.read().decode('utf-8').splitlines()
-        parole_italiane = [w.upper() for w in words if w.isalpha() and len(w) > 2]
+        parole = [w.upper() for w in words if w.isalpha() and len(w) > 2]
     except Exception:
-        parole_italiane = ["ENIGMA", "PYTHON", "TRECCANI", "CRUSCA", "COMPUTER", "INFORMATICA", 
-                           "GATTO", "CANE", "SOLE", "LUNA", "MARE", "VITA", "PROGRAMMAZIONE"]
+        # Fallback in caso di problemi di rete
+        parole = ["ENIGMA", "PYTHON", "STREAMLIT", "GITHUB", "IPAD", "INFORMATICA", 
+                  "GATTO", "CANE", "SOLE", "LUNA", "MARE", "VITA", "PROGRAMMAZIONE"]
     
-    # Ordina per lunghezza decrescente, aiuta ad avere incroci migliori se usiamo le parole lunghe per prime
-    parole_italiane.sort(key=len, reverse=True)
-    btn_genera.config(text="Genera Cruciverba", state=tk.NORMAL)
+    # Ordiniamo per lunghezza decrescente per favorire incroci con parole lunghe
+    parole.sort(key=len, reverse=True)
+    return parole
 
 def controlla_spazio(griglia, parola, riga, col, direzione, R, C):
-    """Verifica se la parola può essere posizionata senza collisioni non valide."""
+    """Verifica se la parola può essere inserita senza collisioni errate."""
     if direzione == "H":
         if col + len(parola) > C: return False
-        # Evita attaccamenti all'inizio e alla fine
         if col > 0 and griglia[riga][col-1] != "": return False
         if col + len(parola) < C and griglia[riga][col+len(parola)] != "": return False
         
         for i, char in enumerate(parola):
             c_corrente = col + i
-            # Se la cella è occupata da una lettera diversa, è un conflitto
             if griglia[riga][c_corrente] != "" and griglia[riga][c_corrente] != char:
                 return False
-            # Se la cella è vuota, assicurati che non tocchi altre lettere sopra o sotto
             if griglia[riga][c_corrente] == "":
                 if riga > 0 and griglia[riga-1][c_corrente] != "": return False
                 if riga < R-1 and griglia[riga+1][c_corrente] != "": return False
-    else: # Verticale ("V")
+    else: # "V"
         if riga + len(parola) > R: return False
-        # Evita attaccamenti all'inizio e alla fine
         if riga > 0 and griglia[riga-1][col] != "": return False
         if riga + len(parola) < R and griglia[riga+len(parola)][col] != "": return False
         
@@ -54,30 +51,14 @@ def controlla_spazio(griglia, parola, riga, col, direzione, R, C):
                 if col < C-1 and griglia[r_corrente][col+1] != "": return False
     return True
 
-def genera_cruciverba():
-    """Genera la griglia a incroci."""
-    try:
-        R = int(entry_righe.get())
-        C = int(entry_colonne.get())
-    except ValueError:
-        messagebox.showerror("Errore", "Inserisci numeri interi validi per righe e colonne.")
-        return
-
-    for widget in frame_griglia.winfo_children():
-        widget.destroy()
-
-    if not parole_italiane:
-        messagebox.showwarning("Attesa", "Dizionario in caricamento, attendi.")
-        return
-
-    # Inizializza la griglia vuota
+def genera_griglia_logica(R, C, parole_italiane):
+    """Genera la matrice del cruciverba."""
     griglia = [["" for _ in range(C)] for _ in range(R)]
     
-    # Seleziona un pool di parole casuali dal dizionario (mescoliamo un sottoinsieme per varietà)
     pool_parole = random.sample(parole_italiane, min(1000, len(parole_italiane)))
     parole_piazzate = []
 
-    # 1. Piazza la prima parola al centro (orizzontale)
+    # 1. Piazza la prima parola al centro
     prima_parola = pool_parole.pop(0)
     while len(prima_parola) > C - 2 and pool_parole:
         prima_parola = pool_parole.pop(0)
@@ -85,28 +66,22 @@ def genera_cruciverba():
     r_inizio = R // 2
     c_inizio = (C - len(prima_parola)) // 2
     
-    # Inserimento della prima parola
     for i, char in enumerate(prima_parola):
         griglia[r_inizio][c_inizio + i] = char
     parole_piazzate.append({"parola": prima_parola, "direzione": "H", "riga": r_inizio, "col": c_inizio})
 
-    # 2. Tenta di incrociare le altre parole
+    # 2. Inserimento a incrocio
     tentativi = 0
-    while pool_parole and tentativi < 500: # Limite per non bloccare il programma
+    while pool_parole and tentativi < 500:
         parola = pool_parole.pop(0)
         piazzata = False
         
-        # Cerca un incrocio con le parole già piazzate
         for p_info in parole_piazzate:
             if piazzata: break
-            
-            # Cerca lettere in comune
             for i, p_char in enumerate(parola):
                 if piazzata: break
-                
                 for j, info_char in enumerate(p_info["parola"]):
                     if p_char == info_char:
-                        # Trovato un punto di incrocio potenziale
                         if p_info["direzione"] == "H":
                             nuova_dir = "V"
                             nuova_riga = p_info["riga"] - i
@@ -116,10 +91,8 @@ def genera_cruciverba():
                             nuova_riga = p_info["riga"] + j
                             nuova_col = p_info["col"] - i
                         
-                        # Controlla se le coordinate base sono dentro la griglia
                         if 0 <= nuova_riga < R and 0 <= nuova_col < C:
                             if controlla_spazio(griglia, parola, nuova_riga, nuova_col, nuova_dir, R, C):
-                                # Piazza la parola
                                 for k, c in enumerate(parola):
                                     if nuova_dir == "H":
                                         griglia[nuova_riga][nuova_col + k] = c
@@ -129,39 +102,42 @@ def genera_cruciverba():
                                 piazzata = True
                                 break
         tentativi += 1
+    return griglia
 
-    # 3. Disegna la griglia su Tkinter
+def disegna_griglia_html(griglia, R, C):
+    """Crea una tabella HTML per renderizzare il cruciverba in modo stiloso."""
+    html = '<table style="border-collapse: collapse; margin-left: auto; margin-right: auto; background-color: black;">'
     for r in range(R):
+        html += '<tr>'
         for c in range(C):
             lettera = griglia[r][c]
-            bg_color = "white" if lettera else "black"
-            tk.Label(frame_griglia, text=lettera, bg=bg_color, fg="black",
-                     width=2, height=1, font=("Courier", 16, "bold"), relief="solid", borderwidth=1).grid(row=r, column=c, padx=1, pady=1)
+            if lettera:
+                html += f'<td style="width: 30px; height: 30px; background-color: white; color: black; text-align: center; font-weight: bold; font-family: monospace; border: 1px solid #333;">{lettera}</td>'
+            else:
+                html += f'<td style="width: 30px; height: 30px; background-color: black; border: 1px solid #333;"></td>'
+        html += '</tr>'
+    html += '</table>'
+    return html
 
-# --- Setup Interfaccia ---
-root = tk.Tk()
-root.title("Generatore Cruciverba a Incroci")
-root.geometry("800x800")
+# --- Interfaccia Streamlit ---
+st.title("🧩 Generatore Cruciverba")
+st.markdown("Crea uno schema a incroci liberi direttamente dal tuo iPad.")
 
-frame_controlli = tk.Frame(root)
-frame_controlli.pack(pady=20)
+parole_italiane = carica_dizionario()
 
-tk.Label(frame_controlli, text="Righe:").grid(row=0, column=0, padx=5)
-entry_righe = tk.Entry(frame_controlli, width=5)
-entry_righe.grid(row=0, column=1, padx=5)
-entry_righe.insert(0, "15") 
+col1, col2 = st.columns(2)
+with col1:
+    righe = st.number_input("Numero di Righe", min_value=5, max_value=30, value=15, step=1)
+with col2:
+    colonne = st.number_input("Numero di Colonne", min_value=5, max_value=30, value=15, step=1)
 
-tk.Label(frame_controlli, text="Colonne:").grid(row=0, column=2, padx=5)
-entry_colonne = tk.Entry(frame_controlli, width=5)
-entry_colonne.grid(row=0, column=3, padx=5)
-entry_colonne.insert(0, "15") 
-
-btn_genera = tk.Button(frame_controlli, text="Caricamento Dizionario...", command=genera_cruciverba, state=tk.DISABLED)
-btn_genera.grid(row=0, column=4, padx=20)
-
-frame_griglia = tk.Frame(root, bg="gray")
-frame_griglia.pack(padx=10, pady=10)
-
-threading.Thread(target=scarica_dizionario, daemon=True).start()
-
-root.mainloop()
+if st.button("Genera Cruciverba", type="primary", use_container_width=True):
+    with st.spinner("Creazione degli incroci in corso..."):
+        griglia = genera_griglia_logica(righe, colonne, parole_italiane)
+        html_griglia = disegna_griglia_html(griglia, righe, colonne)
+        
+        st.markdown("---")
+        # Mostriamo l'HTML renderizzato
+        st.markdown(html_griglia, unsafe_allow_html=True)
+        st.markdown("---")
+        st.success("Cruciverba generato con successo!")
