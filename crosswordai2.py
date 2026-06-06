@@ -12,7 +12,7 @@ DICT_URL = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/paro
 def carica_dizionario_completo():
     """Scarica il dizionario completo dal web e lo indicizza."""
     try:
-        response = urllib.request.urlopen(DICT_URL, timeout=30)
+        response = urllib.request.urlopen(DICT_URL, timeout=60)
         words = response.read().decode('utf-8').splitlines()
         # Pulizia e filtraggio dei lemmi (solo lettere, lunghezza minima 2 caratteri)
         parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 3]
