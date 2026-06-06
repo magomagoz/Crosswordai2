@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.set_page_config(page_title="Cruciverba 24x14", layout="centered")
+st.set_page_config(page_title="Generatore di Cruciverba", layout="centered")
 
 @st.cache_data
 def prepara_dizionario():
@@ -23,8 +23,8 @@ st.title("🧩 Generatore Cruciverba XXL")
 lista_lemmi = prepara_dizionario()
 st.sidebar.info(f"Lemmi pronti: {len(lista_lemmi)}")
 
-righe = st.sidebar.slider("Righe", 10, 40, 20)
-colonne = st.sidebar.slider("Colonne", 10, 40, 20)
+righe = st.sidebar.slider("Righe", 9, 13, 12)
+colonne = st.sidebar.slider("Colonne", 9, 22, 22)
 
 if st.button("Genera Schema Denso"):
     with st.spinner("Calcolo incroci..."):
