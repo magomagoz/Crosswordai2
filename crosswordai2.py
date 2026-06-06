@@ -10,20 +10,23 @@ DICT_URL = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/paro
 
 @st.cache_data(show_spinner="Download del dizionario italiano completo in corso...")
 def carica_dizionario_completo():
-    """Scarica il dizionario completo dal web e lo indicizza."""
+    """Scarica il dizionario completo simulando un browser per evitare blocchi."""
     try:
-        response = urllib.request.urlopen(DICT_URL, timeout=60)
+        # Aggiungiamo un User-Agent per non farci bloccare da GitHub
+        req = urllib.request.Request(
+            DICT_URL, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        response = urllib.request.urlopen(req, timeout=30)
         words = response.read().decode('utf-8').splitlines()
-        # Pulizia e filtraggio dei lemmi (solo lettere, lunghezza minima 2 caratteri)
-        parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 3]
+        parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 2]
     except Exception as e:
-        # Fallback di emergenza se la connessione fallisce
-        parole = ["ENIGMA", "PYTHON", "STREAMLIT", "GITHUB", "IPAD", "INFORMATICA", 
-                  "CRUSCA", "TRECCANI", "PAROLA", "LOGICA", "CRUCIBA", "GRIGLIA"]
+        # Fallback corretto!
+        parole = ["NESSUN", "DIZIONARIO"]
     
-    # Ordiniamo dal lemma più lungo a quello più corto per ottimizzare l'incastro iniziale
     parole.sort(key=len, reverse=True)
     return parole
+
 
 def controlla_vincoli_spazio(griglia, parola, riga, col, direzione, R, C):
     """
