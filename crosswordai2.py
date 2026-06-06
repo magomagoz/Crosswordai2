@@ -12,7 +12,7 @@ DICT_URL = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/paro
 def carica_dizionario_completo():
     """Scarica il dizionario completo dal web e lo indicizza."""
     try:
-        response = urllib.request.urlopen(DICT_URL, timeout=10)
+        response = urllib.request.urlopen(DICT_URL, timeout=30)
         words = response.read().decode('utf-8').splitlines()
         # Pulizia e filtraggio dei lemmi (solo lettere, lunghezza minima 2 caratteri)
         parole = [w.upper().strip() for w in words if w.isalpha() and len(w) >= 2]
@@ -152,7 +152,7 @@ def genera_struttura_cruciverba(R, C, dizionario):
                                 inserisci_parola_e_nere(griglia, parola, nuova_riga, nuova_col, nuova_dir, R, C)
                                 parole_inserite.append({
                                     "parola": parola, 
-                                    "direzione": nueva_dir, 
+                                    "direzione": nuova_dir, 
                                     "riga": nuova_riga, 
                                     "col": nuova_col
                                 })
